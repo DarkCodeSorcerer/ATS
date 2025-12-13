@@ -48,7 +48,7 @@ export const ApplicationForm: React.FC = () => {
     // Check backend connection before submitting
     const connectionCheck = await checkBackendConnection();
     if (!connectionCheck.connected) {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+      const apiUrl = import.meta.env.VITE_API_URL || "https://ats-w53t.onrender.com";
       toast.error(
         `❌ Cannot connect to backend at ${apiUrl}\n\n` +
         `🔧 To fix:\n` +
@@ -108,7 +108,7 @@ export const ApplicationForm: React.FC = () => {
                 <span className="text-red-600 font-semibold">⚠️ Backend Not Connected</span>
               </div>
               <p className="text-sm text-red-700 mt-1">
-                Cannot connect to backend server at {import.meta.env.VITE_API_URL || "http://localhost:5000"}
+                Cannot connect to backend server at {import.meta.env.VITE_API_URL || "https://ats-w53t.onrender.com"}
               </p>
             </div>
             <button

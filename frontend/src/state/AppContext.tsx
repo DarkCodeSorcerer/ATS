@@ -162,12 +162,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let errorMsg = "Failed to add application";
       
       if (error.isNetworkError || error.code === "ERR_NETWORK" || error.code === "ECONNREFUSED" || error.message?.includes("Network Error")) {
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        const apiUrl = import.meta.env.VITE_API_URL || "https://ats-w53t.onrender.com";
         errorMsg = `❌ Cannot connect to backend server at ${apiUrl}\n\n` +
           `🔧 Quick Fix:\n` +
           `1. Open terminal and run: cd backend && bun run src/index.ts\n` +
           `2. Verify backend/.env has: PORT=5000\n` +
-          `3. Verify frontend/.env has: VITE_API_URL=http://localhost:5000\n` +
+          `3. Verify frontend/.env has: VITE_API_URL=https://ats-w53t.onrender.com\n` +
           `4. Make sure MongoDB is running\n` +
           `5. Restart both servers if you changed .env files\n\n` +
           `💡 Check backend terminal for startup errors!`;

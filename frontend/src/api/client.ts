@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Use environment variable for API URL (set in Vercel for production)
 // Falls back to localhost for development
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL || "https://ats-w53t.onrender.com";
 
 // Log the API URL being used (for debugging)
 if (import.meta.env.DEV) {
@@ -31,7 +31,7 @@ api.interceptors.response.use(
   (error) => {
     // Handle network errors
     if (error.code === "ERR_NETWORK" || error.message === "Network Error" || error.code === "ECONNREFUSED") {
-      const currentApiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+      const currentApiUrl = import.meta.env.VITE_API_URL || "https://ats-w53t.onrender.com";
       error.message = `❌ Cannot connect to backend at ${currentApiUrl}\n\n` +
         `🔧 Quick Fix Steps:\n\n` +
         `1️⃣  Start Backend Server:\n` +
@@ -40,13 +40,13 @@ api.interceptors.response.use(
         `   bun run src/index.ts\n\n` +
         `2️⃣  Check .env Files:\n` +
         `   backend/.env should have: PORT=5000\n` +
-        `   frontend/.env should have: VITE_API_URL=http://localhost:5000\n\n` +
+        `   frontend/.env should have: VITE_API_URL=https://ats-w53t.onrender.com\n\n` +
         `3️⃣  Check MongoDB:\n` +
         `   Make sure MongoDB is running\n` +
         `   Windows: net start MongoDB\n` +
         `   Mac/Linux: brew services start mongodb-community\n\n` +
         `4️⃣  Test Backend:\n` +
-        `   Open browser: http://localhost:5000/health\n` +
+        `   Open browser: https://ats-w53t.onrender.com/health\n` +
         `   Should show: {"status":"ok"}\n\n` +
         `5️⃣  Restart Frontend:\n` +
         `   Stop frontend (Ctrl+C) and restart: bun run dev\n\n` +
