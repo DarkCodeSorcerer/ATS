@@ -38,7 +38,7 @@ export const AuthForm: React.FC<{ mode: "login" | "signup" }> = ({ mode }) => {
   return (
     <form className="space-y-5 bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl w-full max-w-md border border-white/60" onSubmit={submit}>
       <div className="space-y-1">
-        <p className="text-sm text-slate-500">{mode === "login" ? "Sign in to access your ATS dashboard" : "Start tracking your applications"}</p>
+        <p className="text-sm text-slate-500">{mode === "login" ? "Sign in to access your TalentFlow dashboard" : "Start tracking your applications"}</p>
         <h2 className="text-2xl font-semibold text-slate-900">{copy.heading}</h2>
       </div>
 
