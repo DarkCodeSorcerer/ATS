@@ -2,6 +2,22 @@
 
 **TalentFlow** is a full-stack Applicant Tracking System (ATS) built with Bun, TypeScript, MongoDB, and React. Designed specifically for recruiters who sort through hundreds of applications, TalentFlow streamlines the hiring process with intelligent resume matching, comprehensive application tracking, and powerful filtering capabilities.
 
+## 🌐 Live Demo
+
+**Try TalentFlow Now!**
+
+Visit the live application at: **[https://ats-tracking.netlify.app/](https://ats-tracking.netlify.app/)**
+
+1. Click the link above to access the live application
+2. Create a new account to get started
+3. Explore all features including:
+   - Application tracking and management
+   - Resume matching and ranking
+   - Analytics dashboard
+   - Bulk operations and filtering
+
+The live demo is fully functional and allows you to experience all the features of TalentFlow without local setup.
+
 ## ⚠️ Important Note: Resume Upload Format
 
 **For Resume Matching and Checking:**
@@ -32,6 +48,15 @@ TalentFlow/
 │   └── .env          # Frontend configuration
 └── README.md         # This file
 
+## 🚀 Quick Start
+
+**Option 1: Try the Live Demo**
+
+Visit **[https://ats-tracking.netlify.app/](https://ats-tracking.netlify.app/)** to use TalentFlow immediately. Simply create an account and start managing your applications!
+
+**Option 2: Local Development Setup**
+
+If you want to run TalentFlow locally for development or customization, follow the setup instructions below.
 
 ### Manual Setup
 
