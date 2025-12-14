@@ -347,18 +347,18 @@ export const ResumeMatcher: React.FC = () => {
   };
 
   return (
-    <section className="bg-white rounded-xl shadow-lg p-6 space-y-6 border border-gray-100">
+    <section className="bg-white rounded-xl shadow-lg p-4 sm:p-6 space-y-4 sm:space-y-6 border border-gray-100">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-gray-200">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Resume Matcher & Ranker</h2>
-          <p className="text-sm text-gray-600 mt-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Resume Matcher & Ranker</h2>
+          <p className="text-xs sm:text-sm text-gray-600 mt-2">
             Upload resumes (single or bulk) and match against job description. Resumes with ≥80% match are auto-shortlisted.
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button
             onClick={() => setMode("single")}
-            className={`px-5 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-semibold transition-all duration-200 text-sm sm:text-base ${
               mode === "single"
                 ? "bg-indigo-600 text-white shadow-md"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -368,7 +368,7 @@ export const ResumeMatcher: React.FC = () => {
           </button>
           <button
             onClick={() => setMode("bulk")}
-            className={`px-5 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-semibold transition-all duration-200 text-sm sm:text-base ${
               mode === "bulk"
                 ? "bg-indigo-600 text-white shadow-md"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -548,12 +548,12 @@ export const ResumeMatcher: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <label className="text-sm font-medium text-gray-700">Upload Resumes (Multiple files supported)</label>
                 <button
                   type="button"
                   onClick={loadStoredResumes}
-                  className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 px-4 py-2 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-all duration-200 shadow-sm hover:shadow"
+                  className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 px-4 py-2 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-all duration-200 shadow-sm hover:shadow whitespace-nowrap"
                 >
                   📁 Use Stored Resumes
                 </button>
@@ -677,12 +677,12 @@ export const ResumeMatcher: React.FC = () => {
 
           {resumes.length > 0 && (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium">Filter:</label>
+                    <label className="text-xs sm:text-sm font-medium">Filter:</label>
                     <select
-                      className="border rounded px-3 py-1"
+                      className="border rounded px-2 sm:px-3 py-1 text-xs sm:text-sm"
                       value={filterStatus}
                       onChange={(e) => setFilterStatus(e.target.value)}
                     >
@@ -693,9 +693,9 @@ export const ResumeMatcher: React.FC = () => {
                     </select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium">Sort by:</label>
+                    <label className="text-xs sm:text-sm font-medium">Sort by:</label>
                     <select
-                      className="border rounded px-3 py-1"
+                      className="border rounded px-2 sm:px-3 py-1 text-xs sm:text-sm"
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
                     >
@@ -705,9 +705,9 @@ export const ResumeMatcher: React.FC = () => {
                     </select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium">Order:</label>
+                    <label className="text-xs sm:text-sm font-medium">Order:</label>
                     <select
-                      className="border rounded px-3 py-1"
+                      className="border rounded px-2 sm:px-3 py-1 text-xs sm:text-sm"
                       value={sortOrder}
                       onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
                     >
@@ -716,22 +716,22 @@ export const ResumeMatcher: React.FC = () => {
                     </select>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={downloadAsExcel}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
+                    className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs sm:text-sm font-medium"
                   >
                     Download Excel
                   </button>
                   <button
                     onClick={downloadAsPDF}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+                    className="px-3 sm:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-xs sm:text-sm font-medium"
                   >
                     Download PDF
                   </button>
                   <button
                     onClick={handleReset}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition text-sm font-medium"
+                    className="px-3 sm:px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition text-xs sm:text-sm font-medium"
                   >
                     Reset
                   </button>
@@ -747,20 +747,20 @@ export const ResumeMatcher: React.FC = () => {
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h4 className="font-semibold text-lg">{resume.fileName}</h4>
-                        <div className="text-sm text-gray-600 mt-1">
+                        <h4 className="font-semibold text-base sm:text-lg break-words">{resume.fileName}</h4>
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">
                           Uploaded: {new Date(resume.createdAt).toLocaleDateString()}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadge(resume.status)}`}>
+                        <div className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${getStatusBadge(resume.status)}`}>
                           {resume.status.toUpperCase()}
                         </div>
-                        <div className="text-2xl font-bold mt-1">{resume.matchPercentage}%</div>
+                        <div className="text-xl sm:text-2xl font-bold mt-1">{resume.matchPercentage}%</div>
                       </div>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-4 mt-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3 text-xs sm:text-sm">
                       <div>
                         <strong>Email:</strong> {resume.email || "Not found"}
                       </div>
