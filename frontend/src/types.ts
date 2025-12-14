@@ -10,6 +10,18 @@ export interface Application {
   status: ApplicationStatus;
   dateApplied: string;
   notes?: string;
+  resumeFileName?: string;
+  resumeFilePath?: string;
+}
+
+export interface JobDescription {
+  _id: string;
+  title: string;
+  description: string;
+  position?: string;
+  company?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ApplicationPagination {

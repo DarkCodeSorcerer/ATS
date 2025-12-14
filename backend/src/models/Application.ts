@@ -15,7 +15,9 @@ const applicationSchema = new mongoose.Schema(
       default: "applied"
     },
     dateApplied: { type: Date, required: true },
-    notes: { type: String }
+    notes: { type: String },
+    resumeFileName: { type: String },
+    resumeFilePath: { type: String }
   },
   { timestamps: true }
 );

@@ -8,7 +8,7 @@ interface AppContextValue {
   pagination?: ApplicationPagination;
   analytics?: ApplicationAnalytics;
   loading: boolean;
-  fetchApplications(filters?: { status?: string; company?: string; position?: string; search?: string; sortBy?: string; sortOrder?: string; page?: number; limit?: number }): Promise<void>;
+  fetchApplications(filters?: { status?: string; company?: string; position?: string; search?: string; sortBy?: string; sortOrder?: string; page?: number; limit?: number; dateFrom?: string; dateTo?: string }): Promise<void>;
   fetchAnalytics(): Promise<void>;
   addApplication(payload: Omit<Application, "_id">): Promise<void>;
   updateApplication(id: string, data: Partial<Application>): Promise<void>;
@@ -24,13 +24,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pagination, setPagination] = useState<ApplicationPagination | undefined>(undefined);
   const [analytics, setAnalytics] = useState<ApplicationAnalytics | undefined>(undefined);
   const [loading, setLoading] = useState(false);
-  const [currentFilters, setCurrentFilters] = useState<{ status?: string; company?: string; position?: string; search?: string; sortBy?: string; sortOrder?: string; page?: number; limit?: number } | undefined>(undefined);
+  const [currentFilters, setCurrentFilters] = useState<{ status?: string; company?: string; position?: string; search?: string; sortBy?: string; sortOrder?: string; page?: number; limit?: number; dateFrom?: string; dateTo?: string } | undefined>(undefined);
   
   // Track ongoing requests to prevent duplicates
   const fetchingApplicationsRef = useRef(false);
   const fetchingAnalyticsRef = useRef(false);
 
-  const fetchApplications = useCallback(async (filters?: { status?: string; company?: string; position?: string; search?: string; sortBy?: string; sortOrder?: string; page?: number; limit?: number }) => {
+  const fetchApplications = useCallback(async (filters?: { status?: string; company?: string; position?: string; search?: string; sortBy?: string; sortOrder?: string; page?: number; limit?: number; dateFrom?: string; dateTo?: string }) => {
     // Prevent duplicate simultaneous requests
     if (fetchingApplicationsRef.current) {
       console.log("Skipping duplicate fetchApplications request");
@@ -115,7 +115,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []); // Empty dependency array - function is stable
 
-  const addApplication = async (payload: Omit<Application, "_id">) => {
+  const addApplication = async (payload: Omit<Application, "_id"> | FormData) => {
     try {
       const { data } = await api.post("/applications", payload);
       
@@ -162,24 +162,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let errorMsg = "Failed to add application";
       
       if (error.isNetworkError || error.code === "ERR_NETWORK" || error.code === "ECONNREFUSED" || error.message?.includes("Network Error")) {
-        const apiUrl = import.meta.env.VITE_API_URL || "https://ats-2-248d.onrender.com";
+        const apiUrl = import.meta.env.VITE_API_URL || "https://ats-backend-rqqg.onrender.com";
         errorMsg = `❌ Cannot connect to backend server at ${apiUrl}\n\n` +
           `🔧 Quick Fix:\n` +
           `1. Open terminal and run: cd backend && bun run src/index.ts\n` +
           `2. Verify backend/.env has: PORT=5000\n` +
-          `3. Verify frontend/.env has: VITE_API_URL=https://ats-2-248d.onrender.com\n` +
+          `3. Verify frontend/.env has: VITE_API_URL=https://ats-backend-rqqg.onrender.com\n` +
           `4. Make sure MongoDB is running\n` +
           `5. Restart both servers if you changed .env files\n\n` +
           `💡 Check backend terminal for startup errors!`;
       } else if (error.response) {
         // Server responded with error
-        errorMsg = error.response.data?.message || error.response.data?.error || `Server error: ${error.response.status}`;
-        if (error.response.data?.errors) {
-          const errors = error.response.data.errors;
+        const responseData = error.response.data || {};
+        errorMsg = responseData.message || responseData.error || `Server error: ${error.response.status}`;
+        
+        // Log full error for debugging
+        if (process.env.NODE_ENV === "development") {
+          console.error("Full error response:", responseData);
+        }
+        
+        // Check if there's a "received" field with debugging info
+        if (responseData.received) {
+          console.warn("Backend received:", responseData.received);
+        }
+        
+        if (responseData.errors) {
+          const errors = responseData.errors;
           const errorDetails = Object.entries(errors)
-            .map(([key, value]: [string, any]) => `${key}: ${value._errors?.join(", ") || JSON.stringify(value)}`)
+            .filter(([key, value]: [string, any]) => {
+              // Only include fields that have actual errors
+              if (value && typeof value === 'object' && '_errors' in value) {
+                return Array.isArray(value._errors) && value._errors.length > 0;
+              }
+              return false;
+            })
+            .map(([key, value]: [string, any]) => {
+              const fieldName = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim();
+              return `${fieldName}: ${value._errors?.join(", ") || "Required"}`;
+            })
             .join("; ");
-          errorMsg += ` - ${errorDetails}`;
+          if (errorDetails) {
+            errorMsg = errorDetails;
+          }
+        }
+        
+        // If we still don't have a good message, use the status message
+        if (errorMsg === `Server error: ${error.response.status}` && error.response.status === 400) {
+          errorMsg = "Please check all required fields are filled correctly. Make sure Company Name, Position, and Date Applied are provided.";
         }
       } else if (error.message) {
         errorMsg = error.message;

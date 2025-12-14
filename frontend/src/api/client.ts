@@ -2,17 +2,20 @@ import axios from "axios";
 
 // Use environment variable for API URL (set in Vercel for production)
 // Falls back to localhost for development
-const API_URL = import.meta.env.VITE_API_URL || "https://ats-2-248d.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "https://ats-backend-rqqg.onrender.com";
 
 // Log the API URL being used (for debugging)
 if (import.meta.env.DEV) {
   console.log("🔗 API URL:", API_URL);
 }
 
+// Detect if production (Render/Railway) for longer timeout
+const isProduction = API_URL.includes("render.com") || API_URL.includes("railway.app");
+
 export const api = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 30000 // 30 seconds timeout
+  timeout: isProduction ? 40000 : 30000 // 40 seconds for production (Render spin-up), 30s for local
 });
 
 api.interceptors.request.use((config) => {
@@ -31,7 +34,7 @@ api.interceptors.response.use(
   (error) => {
     // Handle network errors
     if (error.code === "ERR_NETWORK" || error.message === "Network Error" || error.code === "ECONNREFUSED") {
-      const currentApiUrl = import.meta.env.VITE_API_URL || "https://ats-2-248d.onrender.com";
+      const currentApiUrl = import.meta.env.VITE_API_URL || "https://ats-backend-rqqg.onrender.com";
       error.message = `❌ Cannot connect to backend at ${currentApiUrl}\n\n` +
         `🔧 Quick Fix Steps:\n\n` +
         `1️⃣  Start Backend Server:\n` +
@@ -40,13 +43,13 @@ api.interceptors.response.use(
         `   bun run src/index.ts\n\n` +
         `2️⃣  Check .env Files:\n` +
         `   backend/.env should have: PORT=5000\n` +
-        `   frontend/.env should have: VITE_API_URL=https://ats-2-248d.onrender.com\n\n` +
+        `   frontend/.env should have: VITE_API_URL=https://ats-backend-rqqg.onrender.com\n\n` +
         `3️⃣  Check MongoDB:\n` +
         `   Make sure MongoDB is running\n` +
         `   Windows: net start MongoDB\n` +
         `   Mac/Linux: brew services start mongodb-community\n\n` +
         `4️⃣  Test Backend:\n` +
-        `   Open browser: https://ats-2-248d.onrender.com/health\n` +
+        `   Open browser: https://ats-backend-rqqg.onrender.com/health\n` +
         `   Should show: {"status":"ok"}\n\n` +
         `5️⃣  Restart Frontend:\n` +
         `   Stop frontend (Ctrl+C) and restart: bun run dev\n\n` +

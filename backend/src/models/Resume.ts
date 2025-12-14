@@ -4,6 +4,7 @@ const resumeSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     jobDescriptionId: { type: String, required: true }, // Reference to job description
+    applicationId: { type: mongoose.Schema.Types.ObjectId, ref: "Application" }, // Link to application (optional)
     fileName: { type: String, required: true },
     originalText: { type: String, required: true },
     // Parsed fields

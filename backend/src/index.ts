@@ -7,6 +7,7 @@ import { connectDb } from "./db.ts";
 import authRoutes from "./routes/auth.ts";
 import applicationRoutes from "./routes/applications.ts";
 import matchRoutes from "./routes/match.ts";
+import jobDescriptionRoutes from "./routes/jobDescriptions.ts";
 
 async function main() {
   // Log configuration (without sensitive data)
@@ -50,7 +51,8 @@ async function main() {
     credentials: true
   }));
 
-  // JSON body parser
+  // Body parsers - urlencoded for form data, json for JSON
+  app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
 
   // HTTP request logger
@@ -69,6 +71,7 @@ async function main() {
   app.use("/auth", authRoutes);
   app.use("/applications", applicationRoutes);
   app.use("/match", matchRoutes);
+  app.use("/job-descriptions", jobDescriptionRoutes);
 
   // 404 handler
   app.use((_req, res) => {

@@ -19,7 +19,8 @@ export async function extractTextWithOCR(file: File): Promise<string> {
     
     return cleaned.trim();
   } catch (error: any) {
-    throw new Error(`OCR failed: ${error.message}`);
+    const errorMsg = error?.message || error?.toString() || 'Unknown error';
+    throw new Error(`OCR failed: ${errorMsg}`);
   }
 }
 

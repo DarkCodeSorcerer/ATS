@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { api } from "../api/client";
 import toast from "react-hot-toast";
 import { extractTextFromPDF, isPDFFile } from "../utils/pdfParser";
@@ -6,6 +6,7 @@ import { extractTextWithOCR, isImageFile } from "../utils/ocrParser";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { JobDescription } from "../types";
 
 interface MatchResult {
   score: number;
@@ -65,6 +66,46 @@ export const ResumeMatcher: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("matchScore");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [savedJobDescs, setSavedJobDescs] = useState<JobDescription[]>([]);
+  const [storedResumes, setStoredResumes] = useState<any[]>([]);
+  const [selectedStoredResumes, setSelectedStoredResumes] = useState<Set<string>>(new Set());
+  const [showStoredResumes, setShowStoredResumes] = useState(false);
+
+  // Load saved job descriptions
+  useEffect(() => {
+    const loadSavedJobDescs = async () => {
+      try {
+        const { data } = await api.get("/job-descriptions");
+        setSavedJobDescs(data);
+      } catch (err) {
+        // Silently fail - not critical
+        console.error("Failed to load saved job descriptions:", err);
+      }
+    };
+    loadSavedJobDescs();
+  }, []);
+
+  // Load stored resumes from applications
+  const loadStoredResumes = async () => {
+    try {
+      const { data } = await api.get("/applications/stored-resumes");
+      setStoredResumes(data.storedResumes || []);
+      setShowStoredResumes(true);
+      if (data.storedResumes && data.storedResumes.length > 0) {
+        toast.success(`Loaded ${data.storedResumes.length} stored resume(s) from applications`);
+      } else {
+        toast("No stored resumes found. Upload resumes in Application Form first.", { icon: "ℹ️" });
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "No load stored resumes");
+    }
+  };
+
+  const loadJobDescription = (jd: JobDescription) => {
+    setJobDescription(jd.description);
+    setJobDescriptionId(jd._id);
+    toast.success(`Loaded: ${jd.title}`);
+  };
 
   const readFile = async (file: File): Promise<string> => {
     try {
@@ -76,15 +117,17 @@ export const ResumeMatcher: React.FC = () => {
           toast.success("PDF extracted successfully!", { id: "pdf-extract" });
           return text;
         } catch (error: any) {
-          toast.error(`PDF extraction failed: ${error.message}. Trying OCR...`, { id: "pdf-extract" });
+          const pdfErrorMsg = error?.message || error?.toString() || 'Unknown error';
+          toast.error(`PDF extraction failed: ${pdfErrorMsg}. Trying OCR...`, { id: "pdf-extract" });
           // Fallback to OCR if PDF parsing fails (might be scanned PDF)
           try {
             const text = await extractTextWithOCR(file);
             toast.success("OCR extraction successful!", { id: "pdf-extract" });
             return text;
           } catch (ocrError: any) {
-            toast.error(`OCR also failed: ${ocrError.message}`, { id: "pdf-extract" });
-            throw new Error(`Failed to extract text from PDF: ${error.message}`);
+            const ocrErrorMsg = ocrError?.message || ocrError?.toString() || 'Unknown error';
+            toast.error(`OCR also failed: ${ocrErrorMsg}`, { id: "pdf-extract" });
+            throw new Error(`Failed to extract text from PDF: ${pdfErrorMsg}. OCR also failed: ${ocrErrorMsg}`);
           }
         }
       }
@@ -97,8 +140,9 @@ export const ResumeMatcher: React.FC = () => {
           toast.success("OCR extraction successful!", { id: "ocr-extract" });
           return text;
         } catch (error: any) {
-          toast.error(`OCR failed: ${error.message}`, { id: "ocr-extract" });
-          throw new Error(`Failed to extract text from image: ${error.message}`);
+          const errorMsg = error?.message || error?.toString() || 'Unknown error';
+          toast.error(`OCR failed: ${errorMsg}`, { id: "ocr-extract" });
+          throw new Error(`Failed to extract text from image: ${errorMsg}`);
         }
       }
       
@@ -154,8 +198,8 @@ export const ResumeMatcher: React.FC = () => {
 
   const handleBulkUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (resumeFiles.length === 0) {
-      toast.error("Please select at least one resume file");
+    if (resumeFiles.length === 0 && selectedStoredResumes.size === 0) {
+      toast.error("Please select at least one resume file or stored resume");
       return;
     }
     if (!jobDescription.trim()) {
@@ -166,23 +210,42 @@ export const ResumeMatcher: React.FC = () => {
     setLoading(true);
     try {
       const jdId = jobDescriptionId || `jd-${Date.now()}`;
-      const formData = new FormData();
-      resumeFiles.forEach((file) => {
-        formData.append("resumes", file);
-      });
-      formData.append("jobDescription", jobDescription);
-      formData.append("jobDescriptionId", jdId);
-
-      const { data } = await api.post("/match/bulk", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
-
-      setBulkResults(data.results);
-      setJobDescriptionId(jdId);
-      toast.success(`Processed ${data.processed} resumes`);
       
-      // Fetch ranked resumes
-      fetchResumes(jdId);
+      // If stored resumes are selected, use them
+      if (selectedStoredResumes.size > 0) {
+        const { data } = await api.post("/match/use-stored-resumes", {
+          jobDescription,
+          jobDescriptionId: jdId,
+          applicationIds: Array.from(selectedStoredResumes)
+        });
+
+        setBulkResults(data.results);
+        setJobDescriptionId(jdId);
+        toast.success(`Processed ${data.processed} stored resume(s). Applications with ≥80% match updated to Interview status.`);
+        
+        // Fetch ranked resumes
+        fetchResumes(jdId);
+        setSelectedStoredResumes(new Set());
+      } else {
+        // Use uploaded files
+        const formData = new FormData();
+        resumeFiles.forEach((file) => {
+          formData.append("resumes", file);
+        });
+        formData.append("jobDescription", jobDescription);
+        formData.append("jobDescriptionId", jdId);
+
+        const { data } = await api.post("/match/bulk", formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+
+        setBulkResults(data.results);
+        setJobDescriptionId(jdId);
+        toast.success(`Processed ${data.processed} resumes. Applications with ≥80% match updated to Interview status.`);
+        
+        // Fetch ranked resumes
+        fetchResumes(jdId);
+      }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Bulk upload failed");
     } finally {
@@ -284,20 +347,20 @@ export const ResumeMatcher: React.FC = () => {
   };
 
   return (
-    <section className="bg-white rounded-xl shadow-lg p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <section className="bg-white rounded-xl shadow-lg p-6 space-y-6 border border-gray-100">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-gray-200">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Resume Matcher & Ranker</h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <h2 className="text-3xl font-bold text-gray-900">Resume Matcher & Ranker</h2>
+          <p className="text-sm text-gray-600 mt-2">
             Upload resumes (single or bulk) and match against job description. Resumes with ≥80% match are auto-shortlisted.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button
             onClick={() => setMode("single")}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
+            className={`px-5 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
               mode === "single"
-                ? "bg-indigo-600 text-white"
+                ? "bg-indigo-600 text-white shadow-md"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
@@ -305,9 +368,9 @@ export const ResumeMatcher: React.FC = () => {
           </button>
           <button
             onClick={() => setMode("bulk")}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
+            className={`px-5 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
               mode === "bulk"
-                ? "bg-indigo-600 text-white"
+                ? "bg-indigo-600 text-white shadow-md"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
@@ -317,7 +380,7 @@ export const ResumeMatcher: React.FC = () => {
       </div>
 
       {mode === "single" ? (
-        <form className="space-y-4" onSubmit={handleSingleMatch}>
+        <form className="space-y-4" onSubmit={handleSingleMatch} key="single">
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -358,29 +421,46 @@ export const ResumeMatcher: React.FC = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700">Job Description</label>
-                <label className="text-xs text-indigo-600 cursor-pointer hover:text-indigo-700">
-                  Upload file
-                  <input
-                    type="file"
-                    accept="*/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        try {
-                          setLoading(true);
-                          const text = await readFile(file);
-                          setJobDescription(text);
-                          toast.success("File loaded successfully!");
-                        } catch (err: any) {
-                          toast.error(err.message || "Failed to read file");
-                        } finally {
-                          setLoading(false);
+                <div className="flex gap-2">
+                  {savedJobDescs.length > 0 && (
+                    <select
+                      className="text-xs border rounded px-2 py-1 bg-white"
+                      value={jobDescriptionId}
+                      onChange={(e) => {
+                        const jd = savedJobDescs.find(j => j._id === e.target.value);
+                        if (jd) loadJobDescription(jd);
+                      }}
+                    >
+                      <option value="">Load saved...</option>
+                      {savedJobDescs.map(jd => (
+                        <option key={jd._id} value={jd._id}>{jd.title}</option>
+                      ))}
+                    </select>
+                  )}
+                  <label className="text-xs text-indigo-600 cursor-pointer hover:text-indigo-700 px-2 py-1 border border-indigo-200 rounded hover:bg-indigo-50">
+                    Upload file
+                    <input
+                      type="file"
+                      accept="*/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            setLoading(true);
+                            const text = await readFile(file);
+                            setJobDescription(text);
+                            toast.success("File loaded successfully!");
+                          } catch (err: any) {
+                            toast.error(err.message || "Failed to read file");
+                          } finally {
+                            setLoading(false);
+                          }
                         }
-                      }
-                    }}
+                      }}
                   />
                 </label>
+                </div>
               </div>
               <textarea
                 className="w-full border rounded-lg p-3 h-40 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
@@ -440,7 +520,24 @@ export const ResumeMatcher: React.FC = () => {
         <div className="space-y-6">
           <form className="space-y-4" onSubmit={handleBulkUpload}>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Job Description</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">Job Description</label>
+                {savedJobDescs.length > 0 && (
+                  <select
+                    className="text-xs border rounded px-2 py-1 bg-white"
+                    value={jobDescriptionId}
+                    onChange={(e) => {
+                      const jd = savedJobDescs.find(j => j._id === e.target.value);
+                      if (jd) loadJobDescription(jd);
+                    }}
+                  >
+                    <option value="">Load saved...</option>
+                    {savedJobDescs.map(jd => (
+                      <option key={jd._id} value={jd._id}>{jd.title}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <textarea
                 className="w-full border rounded-lg p-3 h-32 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
                 placeholder="Paste job description"
@@ -450,8 +547,92 @@ export const ResumeMatcher: React.FC = () => {
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Upload Resumes (Multiple files supported)</label>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">Upload Resumes (Multiple files supported)</label>
+                <button
+                  type="button"
+                  onClick={loadStoredResumes}
+                  className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 px-4 py-2 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-all duration-200 shadow-sm hover:shadow"
+                >
+                  📁 Use Stored Resumes
+                </button>
+              </div>
+              
+              {showStoredResumes && storedResumes.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700">Stored Resumes from Applications</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowStoredResumes(false);
+                        setSelectedStoredResumes(new Set());
+                      }}
+                      className="text-xs text-gray-600 hover:text-gray-800"
+                    >
+                      Hide
+                    </button>
+                  </div>
+                  <div className="mb-2 flex items-center gap-2 pb-2 border-b border-blue-200">
+                    <input
+                      type="checkbox"
+                      checked={selectedStoredResumes.size === storedResumes.length && storedResumes.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedStoredResumes(new Set(storedResumes.map(sr => sr.applicationId)));
+                        } else {
+                          setSelectedStoredResumes(new Set());
+                        }
+                      }}
+                      className="rounded"
+                      id="select-all-stored"
+                    />
+                    <label htmlFor="select-all-stored" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Select All ({storedResumes.length})
+                    </label>
+                  </div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {storedResumes.map((sr) => (
+                      <label key={sr.applicationId} className="flex items-center gap-2 p-2 hover:bg-blue-100 rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedStoredResumes.has(sr.applicationId)}
+                          onChange={(e) => {
+                            const newSet = new Set(selectedStoredResumes);
+                            if (e.target.checked) {
+                              newSet.add(sr.applicationId);
+                            } else {
+                              newSet.delete(sr.applicationId);
+                            }
+                            setSelectedStoredResumes(newSet);
+                          }}
+                          className="rounded"
+                        />
+                        <div className="flex-1 text-sm">
+                          <div className="font-medium">
+                            {sr.fileName && sr.fileName !== 'resume' 
+                              ? sr.fileName 
+                              : `Resume - ${sr.candidateName || sr.candidateEmail || 'Unknown'}`}
+                            {sr.fileName && !sr.fileName.toLowerCase().match(/\.(pdf|doc|docx)$/i) && (
+                              <span className="text-gray-500 ml-1 text-xs">(PDF)</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {sr.companyName} - {sr.position} {sr.candidateEmail && `(${sr.candidateEmail})`}
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  {selectedStoredResumes.size > 0 && (
+                    <div className="mt-2 text-xs text-blue-700 font-medium">
+                      {selectedStoredResumes.size} resume(s) selected
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <input
                 type="file"
                 accept="*/*"
@@ -461,7 +642,6 @@ export const ResumeMatcher: React.FC = () => {
                   const files = Array.from(e.target.files || []);
                   setResumeFiles(files);
                 }}
-                required
               />
               {resumeFiles.length > 0 && (
                 <div className="text-sm text-gray-600">
@@ -476,7 +656,12 @@ export const ResumeMatcher: React.FC = () => {
                 className="flex-1 bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold shadow hover:bg-indigo-500 transition disabled:opacity-60"
                 disabled={loading}
               >
-                {loading ? "Processing..." : `Upload & Match ${resumeFiles.length} Resume(s)`}
+                {loading 
+                  ? "Processing..." 
+                  : selectedStoredResumes.size > 0
+                    ? `Match ${selectedStoredResumes.size} Stored Resume(s)`
+                    : `Upload & Match ${resumeFiles.length} Resume(s)`
+                }
               </button>
               {(resumeFiles.length > 0 || jobDescription || resumes.length > 0) && (
                 <button
@@ -494,42 +679,42 @@ export const ResumeMatcher: React.FC = () => {
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Filter:</label>
-                  <select
-                    className="border rounded px-3 py-1"
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                  >
-                    <option value="">All</option>
-                    <option value="shortlisted">Shortlisted</option>
-                    <option value="low_priority">Low Priority</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Sort by:</label>
-                  <select
-                    className="border rounded px-3 py-1"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                  >
-                    <option value="matchScore">Match Score</option>
-                    <option value="matchPercentage">Match %</option>
-                    <option value="createdAt">Date</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Order:</label>
-                  <select
-                    className="border rounded px-3 py-1"
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
-                  >
-                    <option value="desc">High to Low</option>
-                    <option value="asc">Low to High</option>
-                  </select>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium">Filter:</label>
+                    <select
+                      className="border rounded px-3 py-1"
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value)}
+                    >
+                      <option value="">All</option>
+                      <option value="shortlisted">Shortlisted</option>
+                      <option value="low_priority">Low Priority</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium">Sort by:</label>
+                    <select
+                      className="border rounded px-3 py-1"
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                    >
+                      <option value="matchScore">Match Score</option>
+                      <option value="matchPercentage">Match %</option>
+                      <option value="createdAt">Date</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium">Order:</label>
+                    <select
+                      className="border rounded px-3 py-1"
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+                    >
+                      <option value="desc">High to Low</option>
+                      <option value="asc">Low to High</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button

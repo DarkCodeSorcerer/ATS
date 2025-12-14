@@ -40,6 +40,8 @@ export const ApplicationList: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("dateApplied");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,7 +58,7 @@ export const ApplicationList: React.FC = () => {
   // Fetch applications when filters/sorting/pagination changes
   useEffect(() => {
     // Create a unique key for this fetch request
-    const fetchKey = `${search}-${statusFilter}-${sortBy}-${sortOrder}-${currentPage}-${pageSize}`;
+    const fetchKey = `${search}-${statusFilter}-${dateFrom}-${dateTo}-${sortBy}-${sortOrder}-${currentPage}-${pageSize}`;
     
     // Skip if already fetching with same parameters
     if (lastFetchRef.current === fetchKey && loading) {
@@ -70,6 +72,8 @@ export const ApplicationList: React.FC = () => {
       fetchApplications({
         search: search || undefined,
         status: statusFilter || undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
         sortBy,
         sortOrder,
         page: currentPage,
@@ -82,12 +86,12 @@ export const ApplicationList: React.FC = () => {
         }
         // Don't show error for network errors if backend is clearly not running
         if (error.isNetworkError || error.code === "ERR_NETWORK" || error.code === "ECONNREFUSED") {
-          const apiUrl = import.meta.env.VITE_API_URL || "https://ats-2-248d.onrender.com";
+          const apiUrl = import.meta.env.VITE_API_URL || "https://ats-backend-rqqg.onrender.com";
           toast.error(
             `❌ Cannot connect to backend at ${apiUrl}\n\n` +
             `🔧 Please:\n` +
             `1. Start backend: cd backend && bun run src/index.ts\n` +
-            `2. Check https://ats-2-248d.onrender.com/health in browser\n` +
+            `2. Check https://ats-backend-rqqg.onrender.com/health in browser\n` +
             `3. See CHECK_SETUP.md for help`,
             { duration: 8000 }
           );
@@ -100,7 +104,7 @@ export const ApplicationList: React.FC = () => {
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statusFilter, sortBy, sortOrder, currentPage, pageSize]); // Removed fetchApplications from deps - it's stable now
+  }, [search, statusFilter, dateFrom, dateTo, sortBy, sortOrder, currentPage, pageSize]); // Removed fetchApplications from deps - it's stable now
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -161,11 +165,13 @@ export const ApplicationList: React.FC = () => {
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("");
+    setDateFrom("");
+    setDateTo("");
     setCurrentPage(1);
     fetchApplications({ page: 1, limit: pageSize });
   };
 
-  const hasFilters = search || statusFilter;
+  const hasFilters = search || statusFilter || dateFrom || dateTo;
   const hasSelection = selectedIds.size > 0;
 
   if (loading && applications.length === 0) {
@@ -260,32 +266,53 @@ export const ApplicationList: React.FC = () => {
         )}
 
         {/* Filters and Sorting */}
-        <div className="flex flex-col md:flex-row gap-2 items-center">
-          <input
-            type="text"
-            className="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-            placeholder="Search company, position, candidate name, or email..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          <select
-            className="border p-2 rounded w-full md:w-40 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-          >
-            <option value="">All statuses</option>
-            <option value="applied">Applied</option>
-            <option value="interview">Interview</option>
-            <option value="offer">Offer</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <select
+        <div className="space-y-3">
+          <div className="flex flex-col md:flex-row gap-2 items-center">
+            <input
+              type="text"
+              className="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              placeholder="Search company, position, candidate name, or email..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            <select
+              className="border p-2 rounded w-full md:w-40 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="">All statuses</option>
+              <option value="applied">Applied</option>
+              <option value="interview">Interview</option>
+              <option value="offer">Offer</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <input
+              type="date"
+              className="border p-2 rounded w-full md:w-40 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              placeholder="From Date"
+              value={dateFrom}
+              onChange={(e) => {
+                setDateFrom(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            <input
+              type="date"
+              className="border p-2 rounded w-full md:w-40 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              placeholder="To Date"
+              value={dateTo}
+              onChange={(e) => {
+                setDateTo(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            <select
             className="border p-2 rounded w-full md:w-40 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
@@ -304,7 +331,7 @@ export const ApplicationList: React.FC = () => {
             <option value="desc">Descending</option>
             <option value="asc">Ascending</option>
           </select>
-          {hasFilters && (
+            {hasFilters && (
             <button
               className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition font-medium text-sm whitespace-nowrap"
               onClick={clearFilters}
@@ -312,6 +339,7 @@ export const ApplicationList: React.FC = () => {
               Clear Filters
             </button>
           )}
+          </div>
         </div>
 
         {/* Pagination Info */}
@@ -356,6 +384,7 @@ export const ApplicationList: React.FC = () => {
               <th className="px-4 py-2 text-left">Contact</th>
               <th className="px-4 py-2 text-left">Status</th>
               <th className="px-4 py-2 text-left">Date</th>
+              <th className="px-4 py-2 text-left">Resume</th>
               <th className="px-4 py-2 text-left">Notes</th>
               <th className="px-4 py-2 text-left">Actions</th>
             </tr>
@@ -363,7 +392,7 @@ export const ApplicationList: React.FC = () => {
           <tbody>
             {applications.length === 0 && !loading ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
                   No applications match your filters
                 </td>
               </tr>
@@ -404,6 +433,46 @@ export const ApplicationList: React.FC = () => {
                           ? a.dateApplied.slice(0, 10) 
                           : new Date(a.dateApplied).toISOString().slice(0, 10))
                       : "—"}
+                  </td>
+                  <td className="px-4 py-2 text-sm">
+                    {a.resumeFileName ? (
+                      <a
+                        href={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/applications/${a._id}/resume`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline text-xs"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          const token = localStorage.getItem("token");
+                          if (token) {
+                            fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/applications/${a._id}/resume`, {
+                              headers: {
+                                Authorization: `Bearer ${token}`
+                              }
+                            })
+                              .then(res => res.blob())
+                              .then(blob => {
+                                const url = window.URL.createObjectURL(blob);
+                                const link = document.createElement("a");
+                                link.href = url;
+                                link.download = a.resumeFileName || "resume.pdf";
+                                document.body.appendChild(link);
+                                link.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(link);
+                              })
+                              .catch(err => {
+                                console.error("Failed to download resume:", err);
+                                toast.error("Failed to download resume");
+                              });
+                          }
+                        }}
+                      >
+                        📄 {a.resumeFileName}
+                      </a>
+                    ) : (
+                      <span className="text-gray-400 text-xs">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-2 text-sm max-w-xs truncate" title={a.notes || ""}>{a.notes || <span className="text-gray-400">—</span>}</td>
                   <td className="px-4 py-2">

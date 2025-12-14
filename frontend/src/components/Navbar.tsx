@@ -13,10 +13,20 @@ export const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-8">
-            <Link to="/" className="text-xl font-bold text-indigo-600">
-              ATS System
+            <Link to="/dashboard" className="text-xl font-bold text-indigo-600">
+              TalentFlow
             </Link>
             <div className="flex space-x-4">
+              <Link
+                to="/dashboard"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition ${
+                  isActive("/dashboard")
+                    ? "bg-indigo-100 text-indigo-700"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                Dashboard
+              </Link>
               <Link
                 to="/resume-match"
                 className={`px-3 py-2 rounded-md text-sm font-medium transition ${
@@ -35,7 +45,7 @@ export const Navbar: React.FC = () => {
                     : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                Application Tracking
+                Applications
               </Link>
             </div>
           </div>

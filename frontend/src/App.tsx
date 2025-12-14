@@ -6,6 +6,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { ResumeMatchPage } from "./pages/ResumeMatchPage";
 import { ApplicationTrackingPage } from "./pages/ApplicationTrackingPage";
+import { DashboardPage } from "./pages/DashboardPage";
 
 const Protected: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthed } = useAuth();
@@ -14,7 +15,7 @@ const Protected: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const PublicOnly: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthed } = useAuth();
-  return isAuthed ? <Navigate to="/resume-match" replace /> : <>{children}</>;
+  return isAuthed ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 };
 
 const App: React.FC = () => {
@@ -38,6 +39,14 @@ const App: React.FC = () => {
         }
       />
       <Route
+        path="/dashboard"
+        element={
+          <Protected>
+            <DashboardPage />
+          </Protected>
+        }
+      />
+      <Route
         path="/resume-match"
         element={
           <Protected>
@@ -55,7 +64,7 @@ const App: React.FC = () => {
       />
       <Route
         path="/"
-        element={<Navigate to="/resume-match" replace />}
+        element={<Navigate to="/dashboard" replace />}
       />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

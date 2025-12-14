@@ -1,21 +1,38 @@
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Set worker source - use CDN or local worker
-try {
-  // Try to use CDN worker
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-} catch (e) {
-  // Fallback to unpkg
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+// Set worker source - use reliable CDN with fallback
+// For pdfjs-dist 5.x, the worker file is at build/pdf.worker.min.js
+const PDFJS_VERSION = '5.4.449';
+
+// Initialize worker source with multiple CDN fallbacks
+function initializeWorker() {
+  if (pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    return; // Already initialized
+  }
+  
+  // Use jsdelivr CDN (most reliable)
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.js`;
 }
+
+// Initialize on module load
+initializeWorker();
 
 /**
  * Extract text from PDF file using pdfjs-dist
  */
 export async function extractTextFromPDF(file: File): Promise<string> {
   try {
+    // Ensure worker is initialized
+    initializeWorker();
+    
     const arrayBuffer = await file.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const loadingTask = pdfjsLib.getDocument({ 
+      data: arrayBuffer,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+      verbosity: 0 // Reduce console warnings
+    });
     const pdf = await loadingTask.promise;
     
     let fullText = '';
@@ -39,7 +56,12 @@ export async function extractTextFromPDF(file: File): Promise<string> {
     
     return cleaned.trim();
   } catch (error: any) {
-    throw new Error(`Failed to parse PDF: ${error.message}`);
+    // Provide more helpful error message
+    const errorMsg = error?.message || error?.toString() || 'Unknown error';
+    if (errorMsg.includes('worker') || errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+      throw new Error(`PDF worker failed to load. Please check your internet connection or try again.`);
+    }
+    throw new Error(`Failed to parse PDF: ${errorMsg}`);
   }
 }
 
