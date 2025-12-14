@@ -15,7 +15,7 @@ PDF scanning with comprehensive result display is under active development. In u
 ## 🏗️ Project Structure
 
 ```
-ATS/
+TalentFlow/
 ├── backend/          # Express API server with Bun runtime
 │   ├── src/
 │   │   ├── routes/   # API route handlers
